@@ -1,0 +1,21 @@
+# Bu dosyalar image'a KOPYALANMAZ (COPY . . sırasında atlanır)
+
+# Bağımlılıklar - image içinde npm install ile yeniden kurulacak
+node_modules
+
+# Secret içeren dosya - ASLA image'a girmemeli (güvenlik)
+.env
+
+# Yüklenen test fotoğrafları - image'a gerek yok
+uploads
+
+# Git geçmişi - image'a gereksiz
+.git
+.gitignore
+
+# Loglar
+*.log
+
+# Dockerfile'ın kendisi de image'a gerek değil
+Dockerfile
+.dockerignore

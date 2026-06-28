@@ -1,0 +1,15 @@
+# Bağımlılıklar
+node_modules/
+
+# Yüklenen fotoğraflar (local test)
+backend/uploads/
+
+# Ortam değişkenleri (secret içerir, asla git'e girmemeli)
+.env
+
+# Loglar
+*.log
+
+# DS Store
+echo ".DS_Store" >> .gitignore
+.DS_Store

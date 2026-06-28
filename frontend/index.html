@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snapvault</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 480px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 8px; font-size: 28px; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 28px; font-size: 14px; }
+    .card {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card h2 { font-size: 16px; margin-bottom: 14px; color: #38bdf8; }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 15px;
+    }
+    button {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      background: #38bdf8;
+      color: #0f172a;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    button:hover { background: #0ea5e9; }
+    button.secondary { background: #334155; color: #e2e8f0; }
+    .msg { padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; text-align: center; }
+    .msg.error { background: #7f1d1d; color: #fecaca; }
+    .msg.success { background: #14532d; color: #bbf7d0; }
+    video, canvas { width: 100%; border-radius: 12px; margin-bottom: 10px; }
+    .hidden { display: none; }
+    .gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .gallery img { width: 100%; border-radius: 8px; aspect-ratio: 1; object-fit: cover; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .tabs button { flex: 1; }
+    .tabs button.active { background: #38bdf8; color: #0f172a; }
+    .tabs button:not(.active) { background: #1e293b; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📸 Snapvault</h1>
+    <p class="subtitle">Etkinlik fotoğrafları tek yerde</p>
+
+    <!-- Sekmeler: Katılımcı / Sahip -->
+    <div class="tabs">
+      <button id="tabJoin" class="active" onclick="showTab('join')">Katıl & Çek</button>
+      <button id="tabOwner" onclick="showTab('owner')">Event Oluştur / Galeri</button>
+    </div>
+
+    <!-- ===== KATILIMCI EKRANI ===== -->
+    <div id="joinView">
+      <div class="card" id="joinForm">
+        <h2>Etkinliğe Katıl</h2>
+        <div id="joinMsg"></div>
+        <input id="joinCode" placeholder="Event No (örn: 1234)">
+        <input id="joinPass" type="password" placeholder="Şifre">
+        <button onclick="joinEvent()">Kamerayı Aç</button>
+      </div>
+
+      <div class="card hidden" id="cameraCard">
+        <h2>Fotoğraf Çek</h2>
+        <div id="camMsg"></div>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" class="hidden"></canvas>
+        <button onclick="takePhoto()">📷 Çek ve Yükle</button>
+        <button class="secondary" onclick="location.reload()" style="margin-top:8px">Çıkış</button>
+      </div>
+    </div>
+
+    <!-- ===== SAHİP EKRANI ===== -->
+    <div id="ownerView" class="hidden">
+      <div class="card">
+        <h2>Yeni Event Oluştur</h2>
+        <div id="createMsg"></div>
+        <input id="createName" placeholder="Event Adı (örn: Ayşe'nin Düğünü)">
+        <input id="createCode" placeholder="Event No belirle (örn: 1234)">
+        <input id="createPass" type="password" placeholder="Şifre belirle">
+        <button onclick="createNewEvent()">Oluştur</button>
+      </div>
+
+      <div class="card">
+        <h2>Galeriyi Gör</h2>
+        <div id="galMsg"></div>
+        <input id="galCode" placeholder="Event No">
+        <input id="galPass" type="password" placeholder="Şifre">
+        <button onclick="loadGallery()">Fotoğrafları Getir</button>
+        <div class="gallery" id="gallery"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = ''; // aynı sunucudan servis edildiği için boş
+    let stream = null;
+    let currentCode = '', currentPass = '';
+
+    function showTab(tab) {
+      document.getElementById('joinView').classList.toggle('hidden', tab !== 'join');
+      document.getElementById('ownerView').classList.toggle('hidden', tab !== 'owner');
+      document.getElementById('tabJoin').classList.toggle('active', tab === 'join');
+      document.getElementById('tabOwner').classList.toggle('active', tab === 'owner');
+    }
+
+    function msg(id, text, type) {
+      document.getElementById(id).innerHTML = text
+        ? `<div class="msg ${type}">${text}</div>` : '';
+    }
+
+    // --- Event oluştur ---
+    async function createNewEvent() {
+      const name = document.getElementById('createName').value;
+      const eventCode = document.getElementById('createCode').value.trim();
+      const password = document.getElementById('createPass').value;
+      if (!eventCode || !password) return msg('createMsg', 'Kod ve şifre gerekli', 'error');
+      try {
+        const r = await fetch(API + '/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventCode, password, name }),
+        });
+        const data = await r.json();
+        if (r.ok) msg('createMsg', '✅ Event oluşturuldu: ' + eventCode, 'success');
+        else msg('createMsg', data.error, 'error');
+      } catch (e) { msg('createMsg', 'Bağlantı hatası', 'error'); }
+    }
+
+    // --- Katıl (şifre doğrula + kamera aç) ---
+    async function joinEvent() {
+      const eventCode = document.getElementById('joinCode').value.trim();
+      const password = document.getElementById('joinPass').value;
+      if (!eventCode || !password) return msg('joinMsg', 'Kod ve şifre gerekli', 'error');
+      try {
+        const r = await fetch(API + '/api/events/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventCode, password }),
+        });
+        const data = await r.json();
+        if (!r.ok) return msg('joinMsg', data.error, 'error');
+        currentCode = eventCode; currentPass = password;
+        // Kamerayı aç
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        document.getElementById('video').srcObject = stream;
+        document.getElementById('joinForm').classList.add('hidden');
+        document.getElementById('cameraCard').classList.remove('hidden');
+      } catch (e) {
+        msg('joinMsg', 'Kamera açılamadı veya bağlantı hatası', 'error');
+      }
+    }
+
+    // --- Foto çek ve yükle ---
+    async function takePhoto() {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      canvas.toBlob(async (blob) => {
+        const form = new FormData();
+        form.append('photo', blob, 'photo.jpg');
+        form.append('eventCode', currentCode);
+        form.append('password', currentPass);
+        msg('camMsg', 'Yükleniyor...', 'success');
+        try {
+          const r = await fetch(API + '/api/photos', { method: 'POST', body: form });
+          const data = await r.json();
+          msg('camMsg', r.ok ? '✅ Yüklendi!' : data.error, r.ok ? 'success' : 'error');
+        } catch (e) { msg('camMsg', 'Yükleme hatası', 'error'); }
+      }, 'image/jpeg', 0.9);
+    }
+
+    // --- Galeri yükle ---
+    async function loadGallery() {
+      const eventCode = document.getElementById('galCode').value.trim();
+      const password = document.getElementById('galPass').value;
+      if (!eventCode || !password) return msg('galMsg', 'Kod ve şifre gerekli', 'error');
+      try {
+        const r = await fetch(API + '/api/photos/list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventCode, password }),
+        });
+        const data = await r.json();
+        if (!r.ok) return msg('galMsg', data.error, 'error');
+        msg('galMsg', `${data.count} fotoğraf bulundu`, 'success');
+        document.getElementById('gallery').innerHTML =
+          data.photos.map(p => `<img src="${p.url}" alt="foto">`).join('');
+      } catch (e) { msg('galMsg', 'Bağlantı hatası', 'error'); }
+    }
+  </script>
+</body>
+</html>

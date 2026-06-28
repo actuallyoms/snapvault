@@ -1,0 +1,57 @@
+services:
+  # ============================================================
+  # BACKEND servisi (YENİ - Aşama 3'te eklendi)
+  # ============================================================
+  backend:
+    build: ./backend # ./backend/Dockerfile'dan image inşa et
+    container_name: snapvault-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000" # Mac'in 3000 portu -> container'ın 3000 portu
+    environment:
+      # Bağlantı bilgileri buradan geçiriliyor (koda gömülü değil).
+      # DB_HOST: 'db' -> backend, PostgreSQL'e SERVİS ADIYLA ulaşır
+      # ('localhost' değil! çünkü container içinde localhost = backend'in kendisi)
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: snapvault
+      DB_PASSWORD: localpassword123
+      DB_NAME: snapvault
+    depends_on:
+      - db # önce db başlasın, sonra backend
+    volumes:
+      # Yüklenen fotoğraflar container yeniden kurulsa da kaybolmasın diye
+      # kalıcı bir volume'a yazılıyor (Aşama 2'de Azure Blob'a taşınacak)
+      - snapvault_uploads:/app/uploads
+
+  # Frontend #
+
+  frontend:
+    build: ./frontend
+    container_name: snapvault-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+  # ============================================================
+  # DATABASE servisi (öncekiyle aynı)
+  # ============================================================
+  db:
+    image: postgres:16
+    container_name: snapvault-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: snapvault
+      POSTGRES_PASSWORD: localpassword123
+      POSTGRES_DB: snapvault
+    ports:
+      - "5432:5432"
+    volumes:
+      - snapvault_pgdata:/var/lib/postgresql/data
+
+# Kalıcı veri alanları (named volumes)
+volumes:
+  snapvault_pgdata: # veritabanı verisi
+  snapvault_uploads: # yüklenen fotoğraflar
