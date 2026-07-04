@@ -13,3 +13,9 @@ backend/uploads/
 # DS Store
 echo ".DS_Store" >> .gitignore
 .DS_Store
+
+**/.terraform/
+.terraform
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl

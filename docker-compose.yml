@@ -9,7 +9,7 @@ services:
     ports:
       - "3000:3000" # Mac'in 3000 portu -> container'ın 3000 portu
     environment:
-      # Bağlantı bilgileri buradan geçiriliyor (koda gömülü değil).
+      # Bağlantı bilgiler buradan geçiriliyor (koda gömülü değil).
       # DB_HOST: 'db' -> backend, PostgreSQL'e SERVİS ADIYLA ulaşır
       # ('localhost' değil! çünkü container içinde localhost = backend'in kendisi)
       DB_HOST: db
