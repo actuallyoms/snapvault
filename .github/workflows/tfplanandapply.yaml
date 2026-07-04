@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # 👇 BURASI PLAN ile APPLY ARASINDAKİ GERÇEK STOP NOKTASI
-    environment: production
+    environment: main
 
     steps:
       - name: Checkout repo
